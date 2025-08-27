@@ -1,17 +1,18 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
+import express from "express";
+import cors from "cors";
+import bodyParser from "body-parser";
+import experienceRoutes from "./routes/experience.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+app.use(cors({
+  origin: "http://localhost:3000" 
+}));
 
-app.get('/', (req, res) => {
-  res.send('Backend is working!');
-});
+app.use(bodyParser.json());
+app.use("/api/experiences", experienceRoutes);
 
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = 5001;
+app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
