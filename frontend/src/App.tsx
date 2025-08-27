@@ -1,16 +1,30 @@
-import React, { useEffect } from 'react';
-import { supabase } from './api/supabaseClient';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./auth/AuthProvider";
+import ProtectedRoute from "./auth/ProtectedRoute";
+import LoginPage from "./auth/Login";
+import ExperiencesPage from "./pages/Experiences";
+import RegisterPage from "./auth/Register";
 
-function App() {
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data, error } = await supabase.from('users').select('*');
-      console.log(data, error);
-    };
-    fetchData();
-  }, []);
+export default function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
-  return <div className="text-center mt-10">Dashboard Frontend Connected!</div>;
+          <Route
+            path="/experiences"
+            element={
+              <ProtectedRoute>
+                <ExperiencesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="*" element={<LoginPage />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
 }
-
-export default App;
