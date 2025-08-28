@@ -1,12 +1,13 @@
 import ExperienceForm from "../components/ExperienceForm";
 import ExperienceList from "../components/ExperienceList";
-
+import {useAuth} from "../auth/AuthProvider";
 export default function ExperiencesPage() {
-  const userId = "4e0e6cbc-d955-423b-97be-f97acb7d6ad2";
-
+  const logout = useAuth().logout;
   return (
     <div>
       <h1>My Experiences</h1>
+      <button onClick={() => logout()}>Logout</button>
+
       <ExperienceForm />
       <ExperienceList  />
     </div>

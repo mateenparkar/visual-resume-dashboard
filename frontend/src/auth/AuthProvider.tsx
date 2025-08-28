@@ -13,6 +13,8 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any | null>(null);
+  const [session, setSession] = useState<any>(null);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
       setUser(session?.user || null);
     });
 
@@ -43,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setSession(null);
   };
 
   return (

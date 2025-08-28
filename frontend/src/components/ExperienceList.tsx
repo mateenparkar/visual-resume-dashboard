@@ -6,12 +6,18 @@ export default function ExperienceList() {
 
   useEffect(() => {
     const fetchExperiences = async () => {
+      const user = supabase.auth.getUser();
+      const { data: { user: currentUser } } = await user;
+      if (!currentUser) return;
+
       const { data, error } = await supabase
         .from("experiences")
         .select("*")
+        .eq("user_id", currentUser.id) 
         .order("start_date", { ascending: false });
+
       if (error) return alert(error.message);
-      setExperiences(data);
+      setExperiences(data || []);
     };
 
     fetchExperiences();

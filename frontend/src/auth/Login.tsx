@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
-import { useNavigate } from "react-router-dom"; 
+import { Link, useNavigate } from "react-router-dom"; 
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -42,6 +42,13 @@ export default function Login() {
       <button onClick={handleLogin} disabled={loading}>
         {loading ? "Logging in..." : "Login"}
       </button>
+      <p className="text-sm mt-4 text-center">
+        Dont have an account?{" "}
+        <Link to="/register" className="text-blue-500 underline">
+        Register
+        </Link>
+        </p>
+
     </div>
   );
 }
