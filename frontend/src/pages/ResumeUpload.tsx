@@ -65,7 +65,6 @@ export default function ResumeUpload() {
         <div style={{ marginTop: "1rem" }}>
           <h3>Parsed Resume Data</h3>
 
-          {/* Skills */}
           {parsedData.skills && parsedData.skills.length > 0 && (
             <>
               <h4>Skills</h4>
@@ -77,7 +76,6 @@ export default function ResumeUpload() {
             </>
           )}
 
-          {/* Education */}
           {parsedData.education && parsedData.education.length > 0 && (
             <>
               <h4>Education</h4>
@@ -91,7 +89,6 @@ export default function ResumeUpload() {
             </>
           )}
 
-          {/* Experiences */}
           {parsedData.experiences && parsedData.experiences.length > 0 && (
             <>
               <h4>Experiences</h4>
