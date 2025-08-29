@@ -12,10 +12,8 @@ router.post("/", requireAuth, upload.single("resume"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    // parse structured data using the shared parser
     const structuredData = await parseResumeWithGroq(req.file);
 
-    // save experiences to Supabase
     const supabase = req.supabase;
     if (structuredData.experiences.length > 0) {
       const { error } = await supabase

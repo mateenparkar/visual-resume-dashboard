@@ -5,16 +5,13 @@ import axios from "axios";
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-// Helper function to convert date strings to PostgreSQL format
 function formatDateForPostgres(dateString) {
   if (!dateString || dateString === 'null') return null;
   
-  // If already in YYYY-MM-DD format, return as is
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
     return dateString;
   }
   
-  // Handle "Month YYYY" format (e.g., "June 2024")
   const monthYearMatch = dateString.match(/^(\w+)\s+(\d{4})$/);
   if (monthYearMatch) {
     const [, monthName, year] = monthYearMatch;
@@ -29,18 +26,15 @@ function formatDateForPostgres(dateString) {
     }
   }
   
-  // Handle "YYYY-MM" format
   if (/^\d{4}-\d{2}$/.test(dateString)) {
     return `${dateString}-01`;
   }
   
-  // If we can't parse it, return null
   console.warn(`Could not parse date: ${dateString}`);
   return null;
 }
 
 export async function parseResumeWithGroq(file) {
-  // file: multer file object { buffer, mimetype, originalname }
 
   let text = "";
 
@@ -86,7 +80,7 @@ ${text}
   const response = await axios.post(
     GROQ_CHAT_URL,
     {
-      model: "llama3-8b-8192", // Changed from "gpt-4o-mini" to a Groq model
+      model: "llama3-8b-8192",
       messages: [
         { role: "system", content: "You are a helpful resume parser." },
         { role: "user", content: prompt },
@@ -104,22 +98,17 @@ ${text}
 
   if (!rawOutput) throw new Error("No output from Groq");
 
-  // Extract JSON from markdown code blocks or other wrapper text
   let jsonString = rawOutput.trim();
   
-  // Remove markdown code blocks if present
   if (jsonString.includes('```')) {
-    // More flexible regex that handles code blocks with or without language identifiers
     const jsonMatch = jsonString.match(/```[a-zA-Z]*\s*(\{[\s\S]*?\})\s*```/);
     if (jsonMatch) {
       jsonString = jsonMatch[1].trim();
     } else {
-      // Fallback: extract between first { and last } after ```
       const codeBlockStart = jsonString.indexOf('```');
       const codeBlockEnd = jsonString.lastIndexOf('```');
       if (codeBlockStart !== -1 && codeBlockEnd !== -1 && codeBlockStart < codeBlockEnd) {
         const codeContent = jsonString.substring(codeBlockStart + 3, codeBlockEnd).trim();
-        // Remove any language identifier on the first line
         const firstNewline = codeContent.indexOf('\n');
         if (firstNewline !== -1 && !codeContent.substring(0, firstNewline).includes('{')) {
           jsonString = codeContent.substring(firstNewline + 1).trim();
@@ -130,7 +119,6 @@ ${text}
     }
   }
   
-  // Final fallback: extract everything between first { and last }
   if (!jsonString.startsWith('{')) {
     const firstBrace = jsonString.indexOf('{');
     const lastBrace = jsonString.lastIndexOf('}');
@@ -139,16 +127,13 @@ ${text}
     }
   }
 
-  // Remove JSON comments (// comments) which are not valid in JSON
   jsonString = jsonString.replace(/\/\/.*$/gm, '').trim();
 
-  // Debug logging
   console.log("Extracted JSON string:", jsonString.substring(0, 100) + "...");
 
   try {
     const parsedData = JSON.parse(jsonString);
     
-    // Format dates for PostgreSQL
     if (parsedData.experiences) {
       parsedData.experiences = parsedData.experiences.map(exp => ({
         ...exp,
