@@ -4,6 +4,7 @@ import ProtectedRoute from "./auth/ProtectedRoute";
 import LoginPage from "./auth/Login";
 import ExperiencesPage from "./pages/Experiences";
 import RegisterPage from "./auth/Register";
+import ResumeUploadPage from "./pages/ResumeUpload";
 
 export default function App() {
   return (
@@ -12,12 +13,19 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-
           <Route
             path="/experiences"
             element={
               <ProtectedRoute>
                 <ExperiencesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/resume"
+            element={
+              <ProtectedRoute>
+                <ResumeUploadPage />
               </ProtectedRoute>
             }
           />

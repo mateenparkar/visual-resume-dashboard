@@ -4,6 +4,7 @@ import { supabase } from "../api/supabaseClient";
 interface AuthContextType {
   user: any | null;
   loading: boolean;
+  session: any | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const session = supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user || null);
+      setSession(data.session);
       setLoading(false);
     });
 
@@ -50,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, session, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
