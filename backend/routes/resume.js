@@ -13,13 +13,14 @@ router.post("/", requireAuth, upload.single("resume"), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
     const structuredData = await parseResumeWithGroq(req.file);
-
     const supabase = req.supabase;
-    if (structuredData.experiences.length > 0) {
-      const { error } = await supabase
+
+    // Insert experiences
+    if (structuredData.experiences?.length > 0) {
+      const { error: expError } = await supabase
         .from("experiences")
         .insert(
-          structuredData.experiences.map(exp => ({
+          structuredData.experiences.map((exp) => ({
             user_id: req.user.id,
             title: exp.title,
             company: exp.company,
@@ -28,11 +29,26 @@ router.post("/", requireAuth, upload.single("resume"), async (req, res) => {
             description: exp.description,
           }))
         );
-      if (error) return res.status(400).json({ error: error.message });
+      if (expError) return res.status(400).json({ error: expError.message });
+    }
+
+    // Insert skills
+    if (structuredData.skills?.length > 0) {
+      const { error: skillsError } = await supabase
+        .from("skills")
+        .insert(
+          structuredData.skills.map((skill) => ({
+            user_id: req.user.id,
+            skill_name: skill.skill_name,
+            proficiency: skill.proficiency,
+            source: skill.source || "resume",
+          }))
+        );
+      if (skillsError) return res.status(400).json({ error: skillsError.message });
     }
 
     res.json({
-      message: "Resume parsed and experiences saved",
+      message: "Resume parsed and data saved",
       skills: structuredData.skills,
       education: structuredData.education,
       experiences: structuredData.experiences,

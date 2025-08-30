@@ -35,7 +35,6 @@ function formatDateForPostgres(dateString) {
 }
 
 export async function parseResumeWithGroq(file) {
-
   let text = "";
 
   if (file.mimetype === "application/pdf" || file.mimetype === "application/octet-stream") {
@@ -62,15 +61,18 @@ IMPORTANT INSTRUCTIONS:
 - Extract any dates mentioned and format as YYYY-MM-DD (e.g., "2024-06-01" for June 2024, use 01 for day when only month/year given)
 - If no specific dates are given for experiences, try to infer from education timeline or leave as null
 - For ongoing activities, use null for end_date
-- Include all technical skills mentioned
+- Extract all technical and soft skills mentioned
+- If a proficiency is stated (like "Advanced Python", "Intermediate SQL", "Beginner JavaScript"), include it
+- If no proficiency is given, leave as null
+- Always set "source" to "resume"
 - DO NOT include any comments (// or /* */) in the JSON output
 - Return only pure, valid JSON that can be parsed directly
 
 Use this exact JSON structure:
 {
-  "skills": ["skill1", "skill2"],
-  "education": [{"institution": "name", "period": "dates"}],
-  "experiences": [{"title": "job title", "company": "company name", "start_date": "YYYY-MM-DD or null", "end_date": "YYYY-MM-DD or null", "description": "description"}]
+  "skills": [{"skill_name": "string", "proficiency": "Beginner/Intermediate/Advanced or null", "source": "resume"}],
+  "education": [{"institution": "string", "period": "string"}],
+  "experiences": [{"title": "string", "company": "string", "start_date": "YYYY-MM-DD or null", "end_date": "YYYY-MM-DD or null", "description": "string"}]
 }
 
 Resume text:
@@ -95,22 +97,22 @@ ${text}
   );
 
   const rawOutput = response.data?.choices?.[0]?.message?.content;
-
   if (!rawOutput) throw new Error("No output from Groq");
 
   let jsonString = rawOutput.trim();
-  
-  if (jsonString.includes('```')) {
+
+  // Handle code blocks if present
+  if (jsonString.includes("```")) {
     const jsonMatch = jsonString.match(/```[a-zA-Z]*\s*(\{[\s\S]*?\})\s*```/);
     if (jsonMatch) {
       jsonString = jsonMatch[1].trim();
     } else {
-      const codeBlockStart = jsonString.indexOf('```');
-      const codeBlockEnd = jsonString.lastIndexOf('```');
+      const codeBlockStart = jsonString.indexOf("```");
+      const codeBlockEnd = jsonString.lastIndexOf("```");
       if (codeBlockStart !== -1 && codeBlockEnd !== -1 && codeBlockStart < codeBlockEnd) {
         const codeContent = jsonString.substring(codeBlockStart + 3, codeBlockEnd).trim();
-        const firstNewline = codeContent.indexOf('\n');
-        if (firstNewline !== -1 && !codeContent.substring(0, firstNewline).includes('{')) {
+        const firstNewline = codeContent.indexOf("\n");
+        if (firstNewline !== -1 && !codeContent.substring(0, firstNewline).includes("{")) {
           jsonString = codeContent.substring(firstNewline + 1).trim();
         } else {
           jsonString = codeContent;
@@ -118,33 +120,35 @@ ${text}
       }
     }
   }
-  
-  if (!jsonString.startsWith('{')) {
-    const firstBrace = jsonString.indexOf('{');
-    const lastBrace = jsonString.lastIndexOf('}');
+
+  if (!jsonString.startsWith("{")) {
+    const firstBrace = jsonString.indexOf("{");
+    const lastBrace = jsonString.lastIndexOf("}");
     if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
       jsonString = jsonString.substring(firstBrace, lastBrace + 1);
     }
   }
 
-  jsonString = jsonString.replace(/\/\/.*$/gm, '').trim();
+  jsonString = jsonString.replace(/\/\/.*$/gm, "").trim();
 
   console.log("Extracted JSON string:", jsonString.substring(0, 100) + "...");
 
   try {
     const parsedData = JSON.parse(jsonString);
-    
+
     if (parsedData.experiences) {
-      parsedData.experiences = parsedData.experiences.map(exp => ({
+      parsedData.experiences = parsedData.experiences.map((exp) => ({
         ...exp,
         start_date: formatDateForPostgres(exp.start_date),
-        end_date: formatDateForPostgres(exp.end_date)
+        end_date: formatDateForPostgres(exp.end_date),
       }));
     }
-    
+
     return parsedData;
   } catch (err) {
     console.log("JSON parse failed. Full extracted string:", jsonString);
-    throw new Error("Failed to parse Groq output: " + err.message + "\nExtracted JSON:\n" + jsonString);
+    throw new Error(
+      "Failed to parse Groq output: " + err.message + "\nExtracted JSON:\n" + jsonString
+    );
   }
 }
