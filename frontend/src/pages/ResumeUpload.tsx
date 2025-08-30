@@ -69,8 +69,11 @@ export default function ResumeUpload() {
             <>
               <h4>Skills</h4>
               <ul>
-                {parsedData.skills.map((skill: string, idx: number) => (
-                  <li key={idx}>{skill}</li>
+                {parsedData.skills.map((skill: any, idx: number) => (
+                  <li key={idx}>
+                    {skill.skill_name}
+                    {skill.proficiency && ` (${skill.proficiency})`}
+                  </li>
                 ))}
               </ul>
             </>
@@ -82,7 +85,7 @@ export default function ResumeUpload() {
               <ul>
                 {parsedData.education.map((edu: any, idx: number) => (
                   <li key={idx}>
-                    {edu.institution} ({edu.period?.start_date} - {edu.period?.end_date || "Present"})
+                    {edu.institution} ({edu.period})
                   </li>
                 ))}
               </ul>
@@ -95,7 +98,7 @@ export default function ResumeUpload() {
               <ul>
                 {parsedData.experiences.map((exp: any, idx: number) => (
                   <li key={idx}>
-                    <strong>{exp.title}</strong> @ {exp.company} 
+                    <strong>{exp.title}</strong> @ {exp.company}
                     {exp.start_date && exp.end_date && ` (${exp.start_date} - ${exp.end_date})`}
                     {exp.description && <p>{exp.description}</p>}
                   </li>
