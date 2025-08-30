@@ -1,19 +1,26 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../api/supabaseClient";
 
+interface Skill {
+  id: string;
+  skill_name: string;
+  proficiency: string | null;
+}
+
 interface Experience {
-  id:string;
-  title:string;
-  company:string;
-  start_date:string;
-  end_date:string | null;
-  description:string;
+  id: string;
+  title: string;
+  company: string;
+  start_date: string;
+  end_date: string | null;
+  description: string;
+  skills?: Skill[];
 }
 
 export default function ExperienceList() {
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const[formData, setFormData] = useState<Partial<Experience>>({});
+  const [formData, setFormData] = useState<Partial<Experience>>({});
 
   useEffect(() => {
     const fetchExperiences = async () => {
@@ -23,26 +30,41 @@ export default function ExperienceList() {
 
       const { data, error } = await supabase
         .from("experiences")
-        .select("*")
-        .eq("user_id", currentUser.id) 
+        .select(`
+          *,
+          experience_skills (
+            skill:skills (
+              id,
+              skill_name,
+              proficiency
+            )
+          )
+        `)
+        .eq("user_id", currentUser.id)
         .order("start_date", { ascending: false });
 
       if (error) return alert(error.message);
-      setExperiences(data || []);
+
+      const formatted = (data || []).map(exp => ({
+        ...exp,
+        skills: exp.experience_skills?.map((es: any) => es.skill) || [],
+      }));
+
+      setExperiences(formatted);
     };
 
     fetchExperiences();
   }, []);
 
-  const saveEdit = async(id:string) => {
-    if(!formData) return;
-    const{error} = await supabase.from("experiences").update(formData).eq("id", id);
+  const saveEdit = async (id: string) => {
+    if (!formData) return;
+    const { error } = await supabase.from("experiences").update(formData).eq("id", id);
 
-    if(error){
+    if (error) {
       alert("Error saving experiences: " + error.message);
-    }else{
+    } else {
       setExperiences(experiences.map(exp =>
-        exp.id == id ? {...exp, ...formData} : exp
+        exp.id === id ? { ...exp, ...formData } : exp
       ));
       setEditingId(null);
       setFormData({});
@@ -116,6 +138,20 @@ export default function ExperienceList() {
                     : "Present"}
                 </p>
                 <p className="mt-2">{exp.description}</p>
+
+                {exp.skills?.length! > 0 && (
+                  <div className="mt-2">
+                    <h4 className="font-semibold">Skills:</h4>
+                    <ul className="list-disc list-inside">
+                      {exp.skills!.map(skill => (
+                        <li key={skill.id}>
+                          {skill.skill_name}{skill.proficiency ? ` (${skill.proficiency})` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <button
                   onClick={() => {
                     setEditingId(exp.id);
