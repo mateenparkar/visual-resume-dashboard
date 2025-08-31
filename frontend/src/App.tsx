@@ -5,6 +5,7 @@ import LoginPage from "./auth/Login";
 import ExperiencesPage from "./pages/Experiences";
 import RegisterPage from "./auth/Register";
 import ResumeUploadPage from "./pages/ResumeUpload";
+import DashboardPage from "./pages/Dashboard";
 
 export default function App() {
   return (
@@ -26,6 +27,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ResumeUploadPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
               </ProtectedRoute>
             }
           />
