@@ -1,47 +1,48 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthProvider";
-import ProtectedRoute from "./auth/ProtectedRoute";
-import LoginPage from "./auth/Login";
+import Layout from "./components/Layout";
+import Login from "./auth/Login";
+import Register from "./auth/Register";
+import Dashboard from "./pages/Dashboard";
 import ExperiencesPage from "./pages/Experiences";
-import RegisterPage from "./auth/Register";
-import ResumeUploadPage from "./pages/ResumeUpload";
-import DashboardPage from "./pages/Dashboard";
+import ProtectedRoute from "./auth/ProtectedRoute";
 
-export default function App() {
+function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/experiences"
-            element={
-              <ProtectedRoute>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout>
+                <Navigate to="/dashboard" replace />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Layout>
+                <Dashboard />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/experiences" element={
+            <ProtectedRoute>
+              <Layout>
                 <ExperiencesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/resume"
-            element={
-              <ProtectedRoute>
-                <ResumeUploadPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route path="*" element={<LoginPage />} />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
         </Routes>
       </Router>
     </AuthProvider>
   );
 }
+
+export default App;
