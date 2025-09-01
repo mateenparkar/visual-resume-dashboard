@@ -8,7 +8,7 @@ export default function ExperiencesPage() {
       <h1>My Experiences</h1>
       <button onClick={() => logout()}>Logout</button>
 
-      <ExperienceForm />
+      {/* <ExperienceForm /> */}
       <ExperienceList  />
     </div>
   );

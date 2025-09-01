@@ -228,6 +228,12 @@ const TimelineSummary: React.FC<{ gaps: Gap[], overlaps: Overlap[] }> = ({ gaps,
 export default function Dashboard() {
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState<{
+    totalSkills: number;
+    totalCompanies: number;
+    avgDuration: number;
+    mostUsedSkill: string | null;
+  } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -275,6 +281,69 @@ export default function Dashboard() {
     };
 
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: experiences } = await supabase
+        .from("experiences")
+        .select("id, company, start_date, end_date")
+        .eq("user_id", user.id);
+
+      const { data: expSkills } = await supabase
+        .from("experience_skills")
+        .select("skill_id, experiences(id)")
+        .in(
+          "experience_id",
+          experiences?.map((e) => e.id) || []
+        );
+
+      const { data: skills } = await supabase
+        .from("skills")
+        .select("id, skill_name")
+        .eq("user_id", user.id);
+
+      if (!experiences || !skills) return;
+
+      const totalSkills = new Set(skills.map((s) => s.skill_name)).size;
+      const totalCompanies = new Set(
+        experiences.map((e) => e.company)
+      ).size;
+
+      const durations = experiences.map((e) => {
+        const start = new Date(e.start_date);
+        const end = e.end_date ? new Date(e.end_date) : new Date();
+        return (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+      });
+      const avgDuration =
+        durations.length > 0
+          ? durations.reduce((a, b) => a + b, 0) / durations.length
+          : 0;
+
+      const skillCount: Record<string, number> = {};
+      expSkills?.forEach((es) => {
+        const skill = skills.find((s) => s.id === es.skill_id);
+        if (skill) {
+          skillCount[skill.skill_name] = (skillCount[skill.skill_name] || 0) + 1;
+        }
+      });
+      const mostUsedSkill =
+        Object.entries(skillCount).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+      setSummary({
+        totalSkills,
+        totalCompanies,
+        avgDuration,
+        mostUsedSkill,
+      });
+    };
+
+    fetchSummary();
   }, []);
 
   const analyzeTimeline = () => {
@@ -383,6 +452,31 @@ export default function Dashboard() {
   return (
     <div className="p-6 space-y-12">
       <h1 className="text-2xl font-bold">Your Dashboard</h1>
+
+      {summary && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white shadow-md rounded-xl p-6 text-center">
+            <h3 className="text-lg font-semibold text-gray-600">Total Skills</h3>
+            <p className="text-3xl font-bold text-blue-600">{summary.totalSkills}</p>
+          </div>
+          <div className="bg-white shadow-md rounded-xl p-6 text-center">
+            <h3 className="text-lg font-semibold text-gray-600">Companies Worked At</h3>
+            <p className="text-3xl font-bold text-green-600">{summary.totalCompanies}</p>
+          </div>
+          <div className="bg-white shadow-md rounded-xl p-6 text-center">
+            <h3 className="text-lg font-semibold text-gray-600">Avg. Role Duration</h3>
+            <p className="text-3xl font-bold text-purple-600">
+              {summary.avgDuration.toFixed(1)} mo
+            </p>
+          </div>
+          <div className="bg-white shadow-md rounded-xl p-6 text-center">
+            <h3 className="text-lg font-semibold text-gray-600">Most Used Skill</h3>
+            <p className="text-2xl font-bold text-orange-600">
+              {summary.mostUsedSkill || "N/A"}
+            </p>
+          </div>
+        </div>
+      )}
 
       {experiences.length === 0 ? (
         <p className="text-gray-500">
