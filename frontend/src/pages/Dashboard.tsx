@@ -10,6 +10,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
+import { downloadCareerReport } from "../components/PDFCreator";
 
 interface Skill {
   id: string;
@@ -228,6 +229,7 @@ const TimelineSummary: React.FC<{ gaps: Gap[], overlaps: Overlap[] }> = ({ gaps,
 export default function Dashboard() {
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [summary, setSummary] = useState<{
     totalSkills: number;
     totalCompanies: number;
@@ -393,6 +395,33 @@ export default function Dashboard() {
     return { experiences: sortedExperiences, gaps, overlaps };
   };
 
+  const handleDownloadReport = async () => {
+    setIsGeneratingPDF(true);
+    try {
+      const { experiences: timelineExperiences, gaps, overlaps } = analyzeTimeline();
+      
+      const reportData = {
+        summary: summary || {
+          totalSkills: 0,
+          totalCompanies: 0,
+          avgDuration: 0,
+          mostUsedSkill: null,
+        },
+        experiences,
+        gaps,
+        overlaps,
+        skillFrequency,
+      };
+      
+      await downloadCareerReport(reportData);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF report. Please try again.');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   if (loading) return <p>Loading dashboard...</p>;
 
   const allSkills: Skill[] = experiences.flatMap(
@@ -451,157 +480,183 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-12">
-      <h1 className="text-2xl font-bold">Your Dashboard</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Your Dashboard</h1>
+        <button
+          onClick={handleDownloadReport}
+          disabled={isGeneratingPDF || experiences.length === 0}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {isGeneratingPDF ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Generating PDF...
+            </>
+          ) : (
+            <>
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download Report
+            </>
+          )}
+        </button>
+      </div>
 
-      {summary && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white shadow-md rounded-xl p-6 text-center">
-            <h3 className="text-lg font-semibold text-gray-600">Total Skills</h3>
-            <p className="text-3xl font-bold text-blue-600">{summary.totalSkills}</p>
-          </div>
-          <div className="bg-white shadow-md rounded-xl p-6 text-center">
-            <h3 className="text-lg font-semibold text-gray-600">Companies Worked At</h3>
-            <p className="text-3xl font-bold text-green-600">{summary.totalCompanies}</p>
-          </div>
-          <div className="bg-white shadow-md rounded-xl p-6 text-center">
-            <h3 className="text-lg font-semibold text-gray-600">Avg. Role Duration</h3>
-            <p className="text-3xl font-bold text-purple-600">
-              {summary.avgDuration.toFixed(1)} mo
-            </p>
-          </div>
-          <div className="bg-white shadow-md rounded-xl p-6 text-center">
-            <h3 className="text-lg font-semibold text-gray-600">Most Used Skill</h3>
-            <p className="text-2xl font-bold text-orange-600">
-              {summary.mostUsedSkill || "N/A"}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {experiences.length === 0 ? (
-        <p className="text-gray-500">
-          No experiences found. Add some experiences to see your analytics!
-        </p>
-      ) : (
-        <>
-          <div className="h-80">
-            <h2 className="text-xl mb-4">Skill Frequency</h2>
-            {barChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="skill" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#8884d8" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-gray-500">
-                No skills data available for chart.
+      <div id="dashboard-report">
+        {summary && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white shadow-md rounded-xl p-6 text-center">
+              <h3 className="text-lg font-semibold text-gray-600">Total Skills</h3>
+              <p className="text-3xl font-bold text-blue-600">{summary.totalSkills}</p>
+            </div>
+            <div className="bg-white shadow-md rounded-xl p-6 text-center">
+              <h3 className="text-lg font-semibold text-gray-600">Companies Worked At</h3>
+              <p className="text-3xl font-bold text-green-600">{summary.totalCompanies}</p>
+            </div>
+            <div className="bg-white shadow-md rounded-xl p-6 text-center">
+              <h3 className="text-lg font-semibold text-gray-600">Avg. Role Duration</h3>
+              <p className="text-3xl font-bold text-purple-600">
+                {summary.avgDuration.toFixed(1)} mo
               </p>
-            )}
-          </div>
-
-          <div className="h-96">
-            <h2 className="text-xl mb-4">
-              Skill vs Proficiency Heatmap
-            </h2>
-            {heatmapData.length > 0 ? (
-              <ResponsiveHeatMap
-                data={heatmapData}
-                margin={{ top: 40, right: 60, bottom: 60, left: 80 }}
-                valueFormat=">-.0f"
-                axisTop={{
-                  tickRotation: -30,
-                }}
-                axisRight={null}
-                axisBottom={{
-                  legend: "Proficiency",
-                  legendPosition: "middle",
-                  legendOffset: 40,
-                }}
-                axisLeft={{
-                  legend: "Skills",
-                  legendPosition: "middle",
-                  legendOffset: -60,
-                }}
-                colors={{
-                  type: "sequential",
-                  scheme: "blues",
-                }}
-                emptyColor="#eeeeee"
-              />
-            ) : (
-              <p className="text-gray-500">
-                No skills data available for heatmap.
+            </div>
+            <div className="bg-white shadow-md rounded-xl p-6 text-center">
+              <h3 className="text-lg font-semibold text-gray-600">Most Used Skill</h3>
+              <p className="text-2xl font-bold text-orange-600">
+                {summary.mostUsedSkill || "N/A"}
               </p>
-            )}
+            </div>
           </div>
+        )}
 
-          <div className="space-y-6">
-            <h2 className="text-xl">Career Timeline</h2>
-            
-            {timelineExperiences.length > 0 ? (
-              <>
-                <TimelineSummary gaps={gaps} overlaps={overlaps} />
+        {experiences.length === 0 ? (
+          <p className="text-gray-500">
+            No experiences found. Add some experiences to see your analytics!
+          </p>
+        ) : (
+          <>
+            <div className="h-80">
+              <h2 className="text-xl mb-4">Skill Frequency</h2>
+              {barChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="skill" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#8884d8" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-gray-500">
+                  No skills data available for chart.
+                </p>
+              )}
+            </div>
 
-                <div className="h-96">
-                  <h3 className="text-lg mb-4">Interactive Career Timeline</h3>
-                  <div className="bg-white border rounded-lg p-4 overflow-x-auto">
-                    <GanttTimeline 
-                      experiences={timelineExperiences}
-                      gaps={gaps}
-                      overlaps={overlaps}
-                    />
+            <div className="h-96">
+              <h2 className="text-xl mb-4">
+                Skill vs Proficiency Heatmap
+              </h2>
+              {heatmapData.length > 0 ? (
+                <ResponsiveHeatMap
+                  data={heatmapData}
+                  margin={{ top: 40, right: 60, bottom: 60, left: 80 }}
+                  valueFormat=">-.0f"
+                  axisTop={{
+                    tickRotation: -30,
+                  }}
+                  axisRight={null}
+                  axisBottom={{
+                    legend: "Proficiency",
+                    legendPosition: "middle",
+                    legendOffset: 40,
+                  }}
+                  axisLeft={{
+                    legend: "Skills",
+                    legendPosition: "middle",
+                    legendOffset: -60,
+                  }}
+                  colors={{
+                    type: "sequential",
+                    scheme: "blues",
+                  }}
+                  emptyColor="#eeeeee"
+                />
+              ) : (
+                <p className="text-gray-500">
+                  No skills data available for heatmap.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-6">
+              <h2 className="text-xl">Career Timeline</h2>
+              
+              {timelineExperiences.length > 0 ? (
+                <>
+                  <TimelineSummary gaps={gaps} overlaps={overlaps} />
+
+                  <div className="h-96">
+                    <h3 className="text-lg mb-4">Interactive Career Timeline</h3>
+                    <div className="bg-white border rounded-lg p-4 overflow-x-auto">
+                      <GanttTimeline 
+                        experiences={timelineExperiences}
+                        gaps={gaps}
+                        overlaps={overlaps}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div className="h-80">
-                  <h3 className="text-lg mb-4">Experience Durations</h3>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={timelineExperiences.map(exp => ({
-                        name: `${exp.title} @ ${exp.company}`,
-                        duration: exp.endTime - exp.startTime,
-                        days: Math.round((exp.endTime - exp.startTime) / (1000 * 60 * 60 * 24))
-                      }))}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="name" 
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        interval={0}
-                      />
-                      <YAxis 
-                        tickFormatter={(value) => `${Math.round(value / (1000 * 60 * 60 * 24))} days`}
-                      />
-                      <Tooltip
-                        formatter={(value, name) => [
-                          `${Math.round(Number(value) / (1000 * 60 * 60 * 24))} days`,
-                          'Duration'
-                        ]}
-                        labelFormatter={(label) => String(label)}
-                      />
-                      <Bar 
-                        dataKey="duration" 
-                        fill="#3b82f6"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </>
-            ) : (
-              <p className="text-gray-500">
-                No timeline data available.
-              </p>
-            )}
-          </div>
-        </>
-      )}
+                  <div className="h-80">
+                    <h3 className="text-lg mb-4">Experience Durations</h3>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        data={timelineExperiences.map(exp => ({
+                          name: `${exp.title} @ ${exp.company}`,
+                          duration: exp.endTime - exp.startTime,
+                          days: Math.round((exp.endTime - exp.startTime) / (1000 * 60 * 60 * 24))
+                        }))}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="name" 
+                          angle={-45}
+                          textAnchor="end"
+                          height={80}
+                          interval={0}
+                        />
+                        <YAxis 
+                          tickFormatter={(value) => `${Math.round(value / (1000 * 60 * 60 * 24))} days`}
+                        />
+                        <Tooltip
+                          formatter={(value, name) => [
+                            `${Math.round(Number(value) / (1000 * 60 * 60 * 24))} days`,
+                            'Duration'
+                          ]}
+                          labelFormatter={(label) => String(label)}
+                        />
+                        <Bar 
+                          dataKey="duration" 
+                          fill="#3b82f6"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              ) : (
+                <p className="text-gray-500">
+                  No timeline data available.
+                </p>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
